@@ -1,0 +1,597 @@
+---
+title: "R Notebook"
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+```{r}
+library(modeest)
+library(rio)
+library(readr)
+library(dplyr)
+library(DescTools)
+library(moments)
+library(stringr)
+library(magrittr)
+library(htmltab)
+library(factoextra)
+library(cluster)
+library(ggrepel)
+library(dbscan)
+library(fpc)
+library(ggplot2)
+library(DescTools)
+library(plyr) # para funcion "each"
+library(knitr) #para generar tablas html
+library(kableExtra) #para generar tablas html
+library(car)
+
+linkdata="https://github.com/030700-sanz/Data-Estadistica/blob/main/Trabajo-Estad/DataFinal.xlsx?raw=true"
+DataFinal=import(linkdata)
+```
+
+1. Sacamos las medidas para el analisis univariado 
+```{r}
+## DEPENDIENTE
+#Cálculo simple de estadíticos descriptivos
+minDEP <- min(DataFinal$PorcPBImilitar, na.rm = TRUE)
+q1DEP <- quantile(DataFinal$PorcPBImilitar, probs = 0.25, na.rm = TRUE)
+mediaDEP <- mean.default(DataFinal$PorcPBImilitar, na.rm = TRUE)
+media_recDEP <- Mean(DataFinal$PorcPBImilitar, trim = 0.025, na.rm = TRUE)
+medianaDEP <- median.default(DataFinal$PorcPBImilitar, na.rm = TRUE)
+modaDEP <- Mode(DataFinal$PorcPBImilitar)
+varDEP <- var(DataFinal$PorcPBImilitar, na.rm = TRUE)
+desvestDEP <- sd(DataFinal$PorcPBImilitar, na.rm = TRUE)
+q3DEP <- quantile(DataFinal$PorcPBImilitar, probs = 0.75, na.rm = TRUE)
+maxDEP <- max(DataFinal$PorcPBImilitar, na.rm = TRUE)
+sDEP <- skewness(DataFinal$PorcPBImilitar)
+cDEP <- kurtosis(DataFinal$PorcPBImilitar)
+#Valores de estadísticos como vector
+porPBImilitar <- (c(minDEP,q1DEP,mediaDEP,media_recDEP,medianaDEP, modaDEP,varDEP,desvestDEP,q3DEP,maxDEP,sDEP,cDEP))
+
+#Encabezados de cada estadístico como un vector
+Estadisticos_Univariados <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+
+porcPBImilitar <- data.frame(rbind(Estadisticos_Univariados,porPBImilitar))
+colnames(porcPBImilitar) <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+porcPBImilitar=porcPBImilitar[-c(1),]
+
+##1. CPI
+#Cálculo simple de estadíticos descriptivos
+minCPI <- min(DataFinal$CPI2016, na.rm = TRUE)
+q1CPI <- quantile(DataFinal$CPI2016, probs = 0.25, na.rm = TRUE)
+mediaCPI <- Mean(DataFinal$CPI2016, na.rm = TRUE)
+media_recCPI <- mean.default(DataFinal$CPI2016, trim = 0.025, na.rm = TRUE)
+medianaCPI <- median.default(DataFinal$CPI2016, na.rm = TRUE)
+modaCPI <- Mode(DataFinal$CPI2016) #Salen 3 modas 
+modaCPI <- c(29) 
+varCPI <- var(DataFinal$CPI2016, na.rm = TRUE)
+desvestCPI <- sd(DataFinal$CPI2016, na.rm = TRUE)
+q3CPI <- quantile(DataFinal$CPI2016, probs = 0.75, na.rm = TRUE)
+maxCPI <- max(DataFinal$CPI2016, na.rm = TRUE)
+sCPI <- skewness(DataFinal$CPI2016)
+cCPI <- kurtosis(DataFinal$CPI2016)
+#Valores de estadísticos como vector
+CPI <- c(minCPI,q1CPI,mediaCPI,media_recCPI,medianaCPI,modaCPI,varCPI,desvestCPI,q3CPI,maxCPI,sCPI,cCPI)
+#Encabezados de cada estadístico como un vector
+Estadisticos_UnivariadosCPI <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+
+CPI <- data.frame(rbind(Estadisticos_UnivariadosCPI,CPI))
+colnames(CPI) <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana","Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+CPI=CPI[-c(1),]
+CPI[,c(1:12)]=as.numeric(CPI[,c(1:12)])
+CPI[,c(1:12)] = round(CPI[,c(1:12)], 2)
+
+
+##2. Refugiados
+#Cálculo simple de estadíticos descriptivos
+minRefugiados <- min(DataFinal$Refugiados2016, na.rm = TRUE)
+q1Refugiados <- quantile(DataFinal$Refugiados2016, probs = 0.25, na.rm = TRUE)
+mediaRefugiados <- mean.default(DataFinal$Refugiados2016, na.rm = TRUE)
+media_recRefugiados <- Mean(DataFinal$Refugiados2016, trim = 0.025, na.rm = TRUE)
+medianaRefugiados <- median.default(DataFinal$Refugiados2016, na.rm = TRUE)
+modaRefugiados <- mfv(DataFinal$Refugiados2016)
+modaRefugiados <- c("-")
+varRefugiados <- var(DataFinal$Refugiados2016, na.rm = TRUE)
+desvestRefugiados <- sd(DataFinal$Refugiados2016, na.rm = TRUE)
+q3Refugiados <- quantile(DataFinal$Refugiados2016, probs = 0.75, na.rm = TRUE)
+maxRefugiados <- max(DataFinal$Refugiados2016, na.rm = TRUE)
+sRefugiados <- skewness(DataFinal$Refugiados2016)
+cRefugiados <- kurtosis(DataFinal$Refugiados2016)
+#Valores de estadísticos como vector
+Refugiados <- c(minRefugiados,q1Refugiados,mediaRefugiados,media_recRefugiados,medianaRefugiados, modaRefugiados,varRefugiados,desvestRefugiados,q3Refugiados,maxRefugiados,sRefugiados,cRefugiados)
+#Encabezados de cada estadístico como un vector
+Estadisticos_Univariados <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+
+Refugiados2016 <- data.frame(rbind(Estadisticos_Univariados,Refugiados))
+colnames(Refugiados2016) <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+Refugiados2016=Refugiados2016[-c(1),]
+Refugiados2016[,c(1:12)]=as.numeric(Refugiados2016[,c(1:12)])
+Refugiados2016[,c(1:12)] = round(Refugiados2016[,c(1:12)], 2)
+
+##3. Integridad Gubernamental
+#Cálculo simple de estadíticos descriptivos
+minIG <- min(DataFinal$IntegridadGubernamental, na.rm = TRUE)
+q1IG <- quantile(DataFinal$IntegridadGubernamental, probs = 0.25, na.rm = TRUE)
+mediaIG <- mean.default(DataFinal$IntegridadGubernamental, na.rm = TRUE)
+media_recIG <- Mean(DataFinal$IntegridadGubernamental, trim = 0.025, na.rm = TRUE)
+medianaIG <- median.default(DataFinal$IntegridadGubernamental, na.rm = TRUE)
+modaIG <- Mode(DataFinal$IntegridadGubernamental)
+varIG <- var(DataFinal$IntegridadGubernamental, na.rm = TRUE)
+desvestIG <- sd(DataFinal$IntegridadGubernamental, na.rm = TRUE)
+q3IG <- quantile(DataFinal$IntegridadGubernamental, probs = 0.75, na.rm = TRUE)
+maxIG <- max(DataFinal$IntegridadGubernamental, na.rm = TRUE)
+sIG <- skewness(DataFinal$IntegridadGubernamental)
+cIG <- kurtosis(DataFinal$IntegridadGubernamental)
+#Valores de estadísticos como vector
+Integridad <- c(minIG,q1IG,mediaIG,media_recIG,medianaIG,modaIG,varIG,desvestIG,q3IG,maxIG,sIG,cIG)
+#Encabezados de cada estadístico como un vector
+Estadisticos_UnivariadosIG <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+
+IntegridadGubernamental <- data.frame(rbind(Estadisticos_UnivariadosIG,Integridad))
+colnames(IntegridadGubernamental) <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+IntegridadGubernamental=IntegridadGubernamental[-c(1),]
+
+IntegridadGubernamental[,c(1:12)]=as.numeric(IntegridadGubernamental[,c(1:12)])
+IntegridadGubernamental[,c(1:12)] = round(IntegridadGubernamental[,c(1:12)], 2)
+
+
+##4. Indice de Democracia
+#Cálculo simple de estadíticos descriptivos
+mindemo<- min(DataFinal$IndicedeDemocracia, na.rm = TRUE)
+q1demo <- quantile(DataFinal$IndicedeDemocracia, probs = 0.25, na.rm = TRUE)
+mediademo <- mean.default(DataFinal$IndicedeDemocracia, na.rm = TRUE)
+media_recdemo <- Mean(DataFinal$IndicedeDemocracia, trim = 0.025, na.rm = TRUE)
+medianademo <- median.default(DataFinal$IndicedeDemocracia, na.rm = TRUE)
+modademo <- Mode(DataFinal$IndicedeDemocracia)
+vardemo <- var(DataFinal$IndicedeDemocracia, na.rm = TRUE)
+desvestdemo <- sd(DataFinal$IndicedeDemocracia, na.rm = TRUE)
+q3demo <- quantile(DataFinal$IndicedeDemocracia, probs = 0.75, na.rm = TRUE)
+maxdemo <- max(DataFinal$IndicedeDemocracia, na.rm = TRUE)
+sdemo <- skewness(DataFinal$IndicedeDemocracia)
+cdemo <- kurtosis(DataFinal$IndicedeDemocracia)
+#Valores de estadísticos como vector
+demo <- as.numeric(c(mindemo,q1demo,mediademo,media_recdemo,medianademo,modademo,vardemo,desvestdemo,q3demo,maxdemo,sdemo,cdemo))
+#Encabezados de cada estadístico como un vector
+Estadisticos_Univariadosdemo <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+
+IndiceDemocracia <- data.frame(rbind(Estadisticos_Univariadosdemo,demo))
+colnames(IndiceDemocracia) <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+IndiceDemocracia=IndiceDemocracia[-c(1),]
+
+IndiceDemocracia[,c(1:12)]=as.numeric(IndiceDemocracia[,c(1:12)])
+IndiceDemocracia[,c(1:12)] = round(IndiceDemocracia[,c(1:12)], 2)
+
+
+##5. Ejercito
+#Cálculo simple de estadíticos descriptivos
+minej<- min(DataFinal$ejercito2016, na.rm = TRUE)
+q1ej <- quantile(DataFinal$ejercito2016, probs = 0.25, na.rm = TRUE)
+mediaej <- mean.default(DataFinal$ejercito2016, na.rm = TRUE)
+media_recej <- Mean(DataFinal$ejercito2016, trim = 0.025, na.rm = TRUE)
+medianaej <- median.default(DataFinal$ejercito2016, na.rm = TRUE)
+modaej <- Mode(DataFinal$ejercito2016)
+modaej <- c("-")
+varej <- var(DataFinal$ejercito2016, na.rm = TRUE)
+desvestej <- sd(DataFinal$ejercito2016, na.rm = TRUE)
+q3ej <- quantile(DataFinal$ejercito2016, probs = 0.75, na.rm = TRUE)
+maxej <- max(DataFinal$ejercito2016, na.rm = TRUE)
+sej <- skewness(DataFinal$ejercito2016)
+cej <- kurtosis(DataFinal$ejercito2016)
+#Valores de estadísticos como vector
+ejer <- c(minej,q1ej,mediaej,media_recej,medianaej,modaej,varej,desvestej,q3ej,maxej,sej,cej)
+
+#Encabezados de cada estadístico como un vector
+Estadisticos_Univariadosej <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+
+PersonalFFAA <- data.frame(rbind(Estadisticos_Univariadosej,ejer))
+colnames(PersonalFFAA) <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+PersonalFFAA=PersonalFFAA[-c(1),]
+
+PersonalFFAA[,c(1:12)]=as.numeric(PersonalFFAA[,c(1:12)])
+PersonalFFAA[,c(1:12)] = round(PersonalFFAA[,c(1:12)], 2)
+
+
+##6. PBI2016
+#Cálculo simple de estadíticos descriptivos
+minpbi<- min(DataFinal$PBI2016, na.rm = TRUE)
+q1pbi <- quantile(DataFinal$PBI2016, probs = 0.25, na.rm = TRUE)
+mediapbi <- mean.default(DataFinal$PBI2016, na.rm = TRUE)
+media_recpbi <- Mean(DataFinal$PBI2016, trim = 0.025, na.rm = TRUE)
+medianapbi <- median.default(DataFinal$PBI2016, na.rm = TRUE)
+modapbi <- Mode(DataFinal$PBI2016)
+modapbi <- c("-")
+varpbi <- var(DataFinal$PBI2016, na.rm = TRUE)
+desvestpbi <- sd(DataFinal$PBI2016, na.rm = TRUE)
+q3pbi <- quantile(DataFinal$PBI2016, probs = 0.75, na.rm = TRUE)
+maxpbi <- max(DataFinal$PBI2016, na.rm = TRUE)
+spbi <- skewness(DataFinal$PBI2016)
+cpbi <- kurtosis(DataFinal$PBI2016)
+#Valores de estadísticos como vector
+pb <- as.numeric(c(minpbi,q1pbi,mediapbi,media_recpbi,medianapbi,modapbi,varpbi,desvestpbi,q3pbi,maxpbi,spbi,cpbi))
+#Encabezados de cada estadístico como un vector
+Estadisticos_Univariadospbi <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+
+PBI <- data.frame(rbind(Estadisticos_Univariadospbi, pb))
+colnames(PBI) <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+PBI=PBI[-c(1),]
+
+PBI[,c(1:12)]=as.numeric(PBI[,c(1:12)])
+PBI[,c(1:12)] = round(PBI[,c(1:12)], 2)
+
+##7. Indice de Violacion de Derechos Humanos
+#Cálculo simple de estadíticos descriptivos
+minhr<- min(DataFinal$HumanRights, na.rm = TRUE)
+q1hr <- quantile(DataFinal$HumanRights, probs = 0.25, na.rm = TRUE)
+mediahr <- mean.default(DataFinal$HumanRights, na.rm = TRUE)
+media_rechr <- Mean(DataFinal$HumanRights, trim = 0.025, na.rm = TRUE)
+medianahr <- median.default(DataFinal$HumanRights, na.rm = TRUE)
+modahr <- Mode(DataFinal$HumanRights)
+varhr <- var(DataFinal$HumanRights, na.rm = TRUE)
+desvesthr <- sd(DataFinal$HumanRights, na.rm = TRUE)
+q3hr <- quantile(DataFinal$HumanRights, probs = 0.75, na.rm = TRUE)
+maxhr <- max(DataFinal$HumanRights, na.rm = TRUE)
+shr <- skewness(DataFinal$HumanRights)
+chr <- kurtosis(DataFinal$HumanRights)
+#Valores de estadísticos como vector
+hr <- as.numeric(c(minhr,q1hr,mediahr,media_rechr,medianahr,modahr,varhr,desvesthr,q3hr,maxhr,shr,chr))
+#Encabezados de cada estadístico como un vector
+Estadisticos_Univariadoshr <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+
+IVDH <- data.frame(rbind(Estadisticos_Univariadoshr,hr))
+colnames(IVDH) <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+IVDH=IVDH[-c(1),]
+
+IVDH[,c(1:12)]=as.numeric(IVDH[,c(1:12)])
+IVDH[,c(1:12)] = round(IVDH[,c(1:12)], 2)
+
+
+##8. Indice de Crimen Organizado
+#Cálculo simple de estadíticos descriptivos
+mincr<- min(DataFinal$CrimenOrga, na.rm = TRUE)
+q1cr <- quantile(DataFinal$CrimenOrga, probs = 0.25, na.rm = TRUE)
+mediacr <- mean.default(DataFinal$CrimenOrga, na.rm = TRUE)
+media_reccr <- Mean(DataFinal$CrimenOrga, trim = 0.025, na.rm = TRUE)
+medianacr <- median.default(DataFinal$CrimenOrga, na.rm = TRUE)
+modacr <- Mode(DataFinal$CrimenOrga)
+modacr <- c(4.21)
+varcr <- var(DataFinal$CrimenOrga, na.rm = TRUE)
+desvestcr <- sd(DataFinal$CrimenOrga, na.rm = TRUE)
+q3cr <- quantile(DataFinal$CrimenOrga, probs = 0.75, na.rm = TRUE)
+maxcr <- max(DataFinal$CrimenOrga, na.rm = TRUE)
+scr <- skewness(DataFinal$CrimenOrga)
+ccr <- kurtosis(DataFinal$CrimenOrga)
+#Valores de estadísticos como vector
+cr <- as.numeric(c(mincr,q1cr,mediacr,media_reccr,medianacr,modacr,varcr,desvestcr,q3cr,maxcr,scr,ccr))
+#Encabezados de cada estadístico como un vector
+Estadisticos_Univariadoscr <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+ICO <- data.frame(rbind(Estadisticos_Univariadoscr,cr))
+colnames(ICO) <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+ICO=ICO[-c(1),]
+
+ICO[,c(1:12)]=as.numeric(ICO[,c(1:12)])
+ICO[,c(1:12)] = round(ICO[,c(1:12)], 2)
+
+
+##9. Indice de nivel de paz global
+#Cálculo simple de estadíticos descriptivos
+minpg<- min(DataFinal$GPI2017, na.rm = TRUE)
+q1pg <- quantile(DataFinal$GPI2017, probs = 0.25, na.rm = TRUE)
+mediapg <- mean.default(DataFinal$GPI2017, na.rm = TRUE)
+media_recpg <- Mean(DataFinal$GPI2017, trim = 0.025, na.rm = TRUE)
+medianapg <- median.default(DataFinal$GPI2017, na.rm = TRUE)
+modapg <- Mode(DataFinal$GPI2017)
+modapg <- c(2.012)
+varpg <- var(DataFinal$GPI2017, na.rm = TRUE)
+desvestpg <- sd(DataFinal$GPI2017, na.rm = TRUE)
+q3pg <- quantile(DataFinal$GPI2017, probs = 0.75, na.rm = TRUE)
+maxpg <- max(DataFinal$GPI2017, na.rm = TRUE)
+spg <- skewness(DataFinal$GPI2017)
+cpg <- kurtosis(DataFinal$GPI2017)
+#Valores de estadísticos como vector
+pg <- as.numeric(c(minpg,q1pg,mediapg,media_recpg,medianapg,modapg,varpg,desvestpg,q3pg,maxpg,spg,cpg))
+#Encabezados de cada estadístico como un vector
+Estadisticos_Univariadospg <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+
+IPG <- data.frame(rbind(Estadisticos_Univariadospg,pg))
+colnames(IPG) <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+IPG=IPG[-c(1),]
+
+IPG[,c(1:12)]=as.numeric(IPG[,c(1:12)])
+IPG[,c(1:12)] = round(IPG[,c(1:12)], 2)
+
+
+##10.Numero de ataques terroristas
+#Cálculo simple de estadíticos descriptivos
+minat<- min(DataFinal$NroAtaques2017, na.rm = TRUE)
+q1at <- quantile(DataFinal$NroAtaques2017, probs = 0.25, na.rm = TRUE)
+mediaat <- mean.default(DataFinal$NroAtaques2017, na.rm = TRUE)
+media_recat <- Mean(DataFinal$NroAtaques2017, trim = 0.025, na.rm = TRUE)
+medianaat <- median.default(DataFinal$NroAtaques2017, na.rm = TRUE)
+modaat <- Mode(DataFinal$NroAtaques2017)
+modaat <- c("-")
+varat <- var(DataFinal$NroAtaques2017, na.rm = TRUE)
+desvestat <- sd(DataFinal$NroAtaques2017, na.rm = TRUE)
+q3at <- quantile(DataFinal$NroAtaques2017, probs = 0.75, na.rm = TRUE)
+maxat <- max(DataFinal$NroAtaques2017, na.rm = TRUE)
+sat <- skewness(DataFinal$NroAtaques2017)
+cat <- kurtosis(DataFinal$NroAtaques2017)
+#Valores de estadísticos como vector
+at <- as.numeric(c(minat,q1at,mediaat,media_recat,medianaat,modaat,varat,desvestat,q3at,maxat,sat,cat))
+#Encabezados de cada estadístico como un vector
+Estadisticos_Univariadosat <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+
+NroAT <- data.frame(rbind(Estadisticos_Univariadosat,at))
+colnames(NroAT) <- c("Mínimo", "Q1", "Media", "Media recortada", "Mediana", "Moda","Varianza", "Desviación Estándar", "Q3", "Máximo", "Simetria", "Curtosis")
+NroAT=NroAT[-c(1),]
+NroAT[,c(1:12)]=as.numeric(NroAT[,c(1:12)])
+NroAT[,c(1:12)] = round(NroAT[,c(1:12)], 2)
+
+Variables <- rbind(porcPBImilitar,CPI,Refugiados2016,IntegridadGubernamental,IndiceDemocracia,PersonalFFAA,PBI,IVDH, ICO,IPG,NroAT)
+
+library(xlsx)
+write.xlsx(Variables, file="Variables2.xlsx", sheetName="var", row.names=T, append=FALSE)
+```
+
+Grafico Variable dependiente: %dePBI
+```{r}
+boxplot(DataFinal$PorcPBImilitar, main="Porcentaje de PBI destinado a la compra de armamento militar", col = "skyblue")
+```
+
+Independiente 1: CPI
+```{r}
+boxplot(DataFinal$CPI2016, main="Indice de Percepcion de Corrupcion (IPC-CPI)", col ="pink")
+```
+
+Independiente 2: Refugiados
+```{r}
+boxplot(DataFinal$Refugiados2016, main="Numero de Refugiados por país", col ="bisque2")
+hist(DataFinal$Refugiados2016, main="Numero de Refugiados por país",col = "bisque2", xlab="Numero Total de Refugiados", ylab="Frecuencia")
+```
+
+Independiente 3: Integridad Gubernamental
+```{r}
+boxplot(DataFinal$IntegridadGubernamental, main="Indice de Integridad Gubernamental", col="gold2")
+```
+
+Independiente 4: Indice de Democracia
+```{r}
+boxplot(DataFinal$IndicedeDemocracia, main="Indice de Democracia", col = "aliceblue")
+```
+
+Independiente 5: Personal FFAA
+```{r}
+boxplot(DataFinal$ejercito2016, main="# de Personal FFAA", col = "lightsalmon4")
+hist(DataFinal$ejercito2016, main="# de Personal FFAA", col = "lightsalmon4")
+```
+
+Independiente 6: PBI
+```{r}
+boxplot(DataFinal$PBI2016, main="PBI Total en miles de millones", col = "lightsteelblue")
+hist(DataFinal$PBI2016, main="PBI Total en miles de millones", col = "lightsteelblue", xlab="PBI Total")
+```
+
+Independiente 7: Indice de Violacion a los derechos humanos
+```{r}
+boxplot(DataFinal$HumanRights, main="Indice de Violacion a los derechos humanos", col = "palegreen")
+```
+
+Independiente 8: Indice de Crimen Organizado
+```{r}
+boxplot(DataFinal$CrimenOrga, main="Indice de Crimen Organizado", col = "slategray")
+```
+
+Independiente 9: Indice de paz global
+```{r}
+boxplot(DataFinal$GPI2017, main="Indice de Paz", col = "yellow1")
+hist(DataFinal$GPI2017, main="Indice de Paz Global", col = "khaki2", xlab="Indice de paz", ylab="Frecuencia")
+```
+
+Independiente 10: Numero de Ataques Terroristas
+```{r}
+boxplot(DataFinal$NroAtaques2017, main="Numero de Ataques Terroristas", col = "green4")
+hist(DataFinal$NroAtaques2017, main="Numero de Ataques Terroristas", col = "green4")
+```
+
+II) ANALISIS BIVARIADO
+
+A)DIMENSION POLITICA
+```{r}
+#1. variable dependiente y Indice de paz mundial 
+#Primera hipotesis:
+#Ho = Conforme aumenta el índice de paz global (GPI), tiende aumentar a aumentar su PBImilitar
+
+str(DataFinal$PorcPBImilitar)
+str(DataFinal$GPI2017)
+
+plot(DataFinal$GPI2017, data910$PorcPBImilitar,
+     main="Relación entre INDICE PAZ MUNDIAL y %PBI MILITAR", 
+     xlab="Indice Paz Mundial",
+     ylab="%PBI Adquisiciones Militares", col="red")
+
+ggplot(DataFinal, aes(x=GPI2017, y=PorcPBImilitar)) + geom_point(colour = "red")
+
+# Indice de paz mundial es contraintuitivo
+
+plot(DataFinal$ejercito2016,data$PorcPBImilitar,
+     main="Porcentaje de PBI para armamento militar y personal de las FF.AA.",
+     ylab="Porcentaje de PBI",
+     xlab="Personal FF.AA.",col="orange")
+# Prueba de Normalidad: Ho = Tiene distribucion normal
+# n mayor 50: Kolmogorov-Smirnov
+
+lillie.test(DataFinal$PorcPBImilitar)
+lillie.test(DataFinal$GPI2017)
+
+
+#Entonces tenemos lo siguiente:
+#data:  data910$PorcPBImilitar
+#D = 0.19404, p-value = 1.666e-11
+# Como p-value es menor que 0.05, rechazo la Ho [No paramétrica: Spearmen]
+
+#data:  data910$GPI2017
+#D = 0.12681, p-value = 0.0001037
+# Como p-value es menor que 0.05, rechazo la Ho [No paramétrica: Spearmen]
+
+# Sin embargo, al momento de correr spearmen, R no encuentra el COEFICIENTE DE RELACION - Por lo que se decide escoger "PEARSON".
+
+# Prueba de Correlacion: Ho = "No existe asociacion"
+
+cor.test(DataFinal$GPI2017, data910$PorcPBImilitar, method = c("pearson"))
+# Entonces, se ha concluido que "EXISTE ASOCIACION LINEAL entre las variables.
+# Por otro lado, como el coeficiente de correlacion tiene signo positivo, se puede inferir que las variables tienen una "relacion directa" y una fuerza de "asociación pequena" (0.2855537)
+
+# CONCLUSIÓN: Podemos inferir que conforme un pais es menos pacífico ("aumenta" el índice de paz global-GPI), tiende pequenamente a "aumentar" su %PBImilitar
+
+
+##2.- Segunda hipotesis: Variable dependiente e IPC
+#Ho = "A mayor nivel de percepción de corrupción (IPC), tiende aumentar su PBImilitar"
+str(DataFinal$PorcPBImilitar)
+str(DataFinal$CPI2016)
+
+plot(DataFinal$CPI2016, DataFinal$PorcPBImilitar,
+     main="Relación entre INDICE PERCEPCION DE CORRUPCION y %PBI MILITAR", 
+     xlab="Indice Percepción Corrupcion",
+     ylab="%PBI Adquisiciones Militares", col="blue4")
+ggplot(DataFinal, aes(x=CPI2016, y=PorcPBImilitar)) + geom_point(colour = "blue4")
+
+# Indice de Corrupción es Contraintuitivo
+# Prueba de Normalidad: Ho = Tiene distribucion normal
+# n mayor 50: Kolmogorov-Smirnov
+
+lillie.test(DataFinal$PorcPBImilitar)
+lillie.test(DataFinal$CPI2016)
+
+#Entonces tenemos lo siguiente:
+#data:  data910$PorcPBImilitar
+#D = 0.19404, p-value = 1.666e-11
+# Como p-value es menor que 0.05, rechazo la Ho [No paramétrica: Spearmen]
+#data:  data910$CPI2016
+#D = 0.16049, p-value = 1.042e-07
+# Como p-value es menor que 0.05, rechazo la Ho [No paramétrica: Spearmen]
+
+# Sin embargo, al momento de correr spearmen, R no encuentra el COEFICIENTE DE RELACION - Por lo que se decide escoger "PEARSON".
+
+# Prueba de Correlacion: Ho = No existe asociacion
+
+cor.test(DataFinal$CPI2016, DataFinal$PorcPBImilitar, method = c("pearson"))
+
+# CONCLUSIÓN: Podemos inferir que "NO EXISTE UNA RELACIÓN" entre el nivel de Percepcion de Corrupción (IPC) y el %PBI en adquisición militares.
+
+##3.- Tercera hipotesis: Variable dependiente y Nivel de democracia
+#Ho = "Conforme se incrementa el nivel de democracia, tiende a disminuir su PBImilitar"
+str(data910$PorcPBImilitar)
+str(data910$IndicedeDemocracia)
+summary(data910$IndicedeDemocracia)
+
+plot(data910$IndicedeDemocracia, data910$PorcPBImilitar,
+     main="Relación entre INDICE DEMOCRACIA y %PBI MILITAR", 
+     xlab="Indice de Democracia",
+     ylab="%PBI Adquisiciones Militares", col="green")
+ggplot(data910, aes(x=IndicedeDemocracia, y=PorcPBImilitar)) + geom_point(colour = "green")
+
+# Indice de Democracia es intuitivo
+# Prueba de Normalidad: Ho = Tiene distribucion normal
+# n mayor 50: Kolmogorov-Smirnov
+
+lillie.test(data910$PorcPBImilitar)
+lillie.test(data910$IndicedeDemocracia)
+# Prueba de Correlacion: Ho = No existe asociacion
+
+cor.test(data910$IndicedeDemocracia, data910$PorcPBImilitar, method = c("pearson"))
+
+# Entonces: Como el p-value es menor que 0.05, entonces "RECHAZO la Ho"
+
+
+# Entonces se ha concluido que "EXISTE ASOCIACION LINEAL" entre las variables.
+# Por otro lado, como el coeficiente tiene signo "NEGATIVO", se puede inferir que las variables tienen una "relacion INVERSA" y una fuerza de "asociación media" (r=0.3791374)
+
+# CONCLUSIÓN: Podemos inferir que conforme un pais es más democrático ("aumento" del índice de Democracia), tiende medianamente a "disminuir" su %PBImilitar.
+```
+
+B)DIMENSION ECONOMICA
+```{r}
+##Correlación PorcPBImilitar e Integridad Gubernamental
+plot(DataFinal$IntegridadGubernamental, DataFinal$PorcPBImilitar, main="% de PBI para armamento militar y Libertad Económica", 
+     xlab="% de PBI", 
+     ylab="Libertad económica", col="green")
+boxplot(DataFinal$IntegridadGubernamental, DataFinal$PorcPBImilitar, col="green")
+#Se usa la prueba de Pearson 
+cor.test(DataFinal$IntegridadGubernamental, DataFinal$PorcPBImilitar)
+
+
+###Correlación PorcPBImilitar y PBI2016(milesdemillones)
+plot(DataFinal$PorcPBImilitar, DataFinal$PBI2016, main="% de PBI para armamento militar y PBI", 
+     xlab="% de PBI", 
+       ylab="Producto Bruto Interno", col="green")
+boxplot(DataFinal$PorcPBImilitar, DataFinal$PBI2016, col="blue")
+
+cor.test(DataFinal$PBI2016, DataFinal$PorcPBImilitar)
+
+```
+
+D) DIMENSION ESTRATEGICO-MILITAR
+```{r}
+##Correlacion variable dependiente y PErsonal de las FFFAA
+plot(DataFinal$ejercito2016,data$PorcPBImilitar,
+     main="Porcentaje de PBI para armamento militar y personal de las FF.AA.",
+     ylab="Porcentaje de PBI",
+     xlab="Personal FF.AA.",col="orange")
+cor.test(DataFinal$PorcPBImilitar,data$ejercito2016)
+
+#p-value mayor a 0.05 no se rechaza H0
+
+##Correlacion variable dependiente y Ataques terroristas
+plot(DataFinal$NroAtaques2017,data$PorcPBImilitar,
+     main="Porcentaje de PBI para armamento militar y Ataques terroristas",
+     ylab="Porcentaje de PBI",
+     xlab="Ataques terroristas",col="green")
+cor.test(DataFinal$PorcPBImilitar,data$NroAtaques2017)
+
+#p-value mayor a 0.05 no se rechaza H0
+
+```
+
+E) DIMENSION SOCIAL
+Para el analisis bivariado usaremos las dos variables independientes «HumanRights» y «Refugiados2016» y la variable dependiente «PorcPBImilitar»
+```{r}
+##a) Variable dependiente e indice de derechos humanos
+plot(DataFinal$HumanRights, DataFinal$PorcPBImilitar, main = "Derechos Humanos", xlab = "Human Rights", ylab = "Porcentaje de PBI", col="Orange")
+lillie.test(DataFinal$HumanRights)
+lillie.test(DataFinal$PorcPBImilitar)
+
+#Ahora realizaremos «R de Pearson».
+cor.test(DataFinal$HumanRights, DataFinal$PorcPBImilitar, method = c("pearson"))
+#intensidad mediana, el pvlue es 00017 rechaza la h0, si existe relación relación directa
+
+str(DataFinal$HumanRights)
+hist(DataFinal$HumanRights, col="orange")
+summary(DataFinal$HumanRights)
+
+##b) Variable dependiente y Refugiados
+plot(DataFinal$PorcPBImilitar, DataFinal$Refugiados2016, main = "Refugiados", xlab = "Refugiados 2016", ylab = "Porcentaje de PBI", col="orange")
+
+cor.test(DataFinal$Refugiados2016, DataFinal$PorcPBImilitar, method = c("pearson"))
+cor.test(DataFinal$Refugiados2016, DataFinal$PorcPBImilitar)
+
+str(DataFinal$Refugiados2016)
+hist(DataFinal$Refugiados2016, col="orange")
+summary(DataFinal$Refugiados2016)
+
+#Boxplot usando las dos variables independientes
+boxplot(DataFinal$HumanRights, DataFinal$PorcPBImilitar, col="orange")
+
+plot(DataFinal$Refugiados2016, DataFinal$PorcPBImilitar)
+plot(DataFinal$PorcPBImilitar, DataFinal$Refugiados2016)
+
+plot(DataFinal$Refugiados2016, DataFinal$PorcPBImilitar, xlab="Número de Refugiados", ylab="% de PBI")
+```
